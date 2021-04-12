@@ -1,0 +1,35 @@
+node{
+   stage("GIT CHECKOUT")
+    {
+        git changelog: false, poll: false, url: 'https://github.com/javahometech/my-app'
+    }
+    stage("Maven Build")
+    {
+        sh '/opt/apache-maven-3.8.1/bin/mvn clean install package'
+    }
+    stage(" Docker Image Creation")
+    {
+    
+       sh 'docker build -t ashutosh1996/myimage .'
+    }
+    stage(" pushing image to docker hub registry")
+    {
+        withCredentials([string(credentialsId: 'Dockerpass', variable: 'dockerpass')]) {
+       
+         sh "docker login -u ashutosh1996 ${dockerpass}"
+         
+            }
+    }
+    stage("Creating container on dev server")
+    {
+        sshagent(['nodeid']) {
+      
+         withCredentials([string(credentialsId: 'Dockerpass', variable: 'dockerpass')]) {
+       
+         sh "docker login -u ashutosh1996 ${dockerpass}"
+         sh 'ssh -o StrictHostKeyChecking=no ec2-user@54.167.127.197 docker run -d -p 8090:8080 --name mycontainer ashutosh1996/myimage'
+         
+            }
+        }
+    }
+}
